@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
-import { CATEGORY_COLORS, type TransactionCategory } from "@/data/mockData";
+import { type TransactionCategory } from "@/data/mockData";
 
 const CHART_COLORS = [
     "hsl(160, 84%, 39%)",

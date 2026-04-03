@@ -1,4 +1,3 @@
-import React from 'react'
 import { AppProvider, useAppContext } from '@/context/AppContext'
 import { LayoutDashboard, Sun, Moon } from 'lucide-react'
 import RoleToggle from '@/components/dashboard/RoleToggle'
