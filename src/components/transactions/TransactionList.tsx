@@ -1,14 +1,46 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { parseISO, format } from "date-fns";
-import { Pencil, Trash2, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { Pencil, Trash2, ArrowUpRight, ArrowDownRight, ChevronLeft, ChevronRight, AlertCircle } from "lucide-react";
 import {motion , AnimatePresence} from 'framer-motion'
+import { toast } from "sonner";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import AddTransactionDialog from "./AddTransactionDialog";
 import type { Transaction } from "@/data/mockData";
 
 export default function TransactionList(){
     const {filteredTransactions, role, deleteTransaction} = useAppContext();
     const [editTx, setEditTx] = useState<Transaction | null>(null);
+    const [deletingId, setDeletingId] = useState<string | null>(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 8;
+
+    const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const paginatedTransactions = filteredTransactions.slice(startIndex, startIndex + itemsPerPage);
+
+    // Reset page to 1 when search/filters change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [filteredTransactions.length, filteredTransactions[0]?.id]); // Use length and first ID as heuristic for changes
+
+    const handleConfirmDelete = () => {
+        if (deletingId) {
+            deleteTransaction(deletingId);
+            toast.success("Transaction deleted successfully", {
+                description: "The record has been permanently removed.",
+            });
+            setDeletingId(null);
+        }
+    };
     
     if(!filteredTransactions.length){
         return(
@@ -36,8 +68,8 @@ export default function TransactionList(){
                         </tr>
                     </thead>
                     <tbody>
-                        <AnimatePresence>
-                            {filteredTransactions.map((tx)=>(
+                        <AnimatePresence mode="popLayout">
+                            {paginatedTransactions.map((tx)=>(
                                 <motion.tr
                                 key={tx.id}
                                 initial={{opacity:0}}
@@ -79,7 +111,7 @@ export default function TransactionList(){
                                                     className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors">
                                                     <Pencil className="h-3.5 w-3.5"/>
                                                 </button>
-                                                <button onClick={()=> deleteTransaction(tx.id)}
+                                                <button onClick={()=> setDeletingId(tx.id)}
                                                     className="p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-expense transition-colors">
                                                     <Trash2 className="h-3.5 w-3.5"/>
                                                 </button>
@@ -92,6 +124,69 @@ export default function TransactionList(){
                     </tbody>
                 </table>
             </div>
+            
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+                <div className="flex items-center justify-between px-4 py-4 border-t bg-muted/20">
+                    <div className="text-xs text-muted-foreground">
+                        Showing <span className="font-medium text-foreground">{startIndex + 1}</span> to{" "}
+                        <span className="font-medium text-foreground">
+                            {Math.min(startIndex + itemsPerPage, filteredTransactions.length)}
+                        </span>{" "}
+                        of <span className="font-medium text-foreground">{filteredTransactions.length}</span> entries
+                    </div>
+                    
+                    <div className="flex items-center gap-1">
+                        <button
+                            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                            disabled={currentPage === 1}
+                            className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground disabled:opacity-30 transition-all active:scale-95"
+                        >
+                            <ChevronLeft className="h-4 w-4" />
+                        </button>
+                        
+                        <div className="flex items-center gap-1 px-1">
+                            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                                // Simple logic to show current, first, last, and neighbors if many pages
+                                if (
+                                    totalPages <= 7 ||
+                                    page === 1 ||
+                                    page === totalPages ||
+                                    (page >= currentPage - 1 && page <= currentPage + 1)
+                                ) {
+                                    return (
+                                        <button
+                                            key={page}
+                                            onClick={() => setCurrentPage(page)}
+                                            className={`min-w-8 h-8 rounded-md text-xs font-medium transition-all active:scale-95 ${
+                                                currentPage === page
+                                                    ? "bg-primary text-primary-foreground shadow-md"
+                                                    : "hover:bg-secondary text-muted-foreground hover:text-foreground"
+                                            }`}
+                                        >
+                                            {page}
+                                        </button>
+                                    );
+                                } else if (
+                                    (page === currentPage - 2 && page > 1) ||
+                                    (page === currentPage + 2 && page < totalPages)
+                                ) {
+                                    return <span key={page} className="text-muted-foreground px-1">...</span>;
+                                }
+                                return null;
+                            })}
+                        </div>
+                        
+                        <button
+                            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                            disabled={currentPage === totalPages}
+                            className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground disabled:opacity-30 transition-all active:scale-95"
+                        >
+                            <ChevronRight className="h-4 w-4" />
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
 
         {editTx && (
@@ -101,6 +196,37 @@ export default function TransactionList(){
             onOpenChange={(open) => !open && setEditTx(null)}
             />
         )}
+
+        <Dialog open={!!deletingId} onOpenChange={(open) => !open && setDeletingId(null)}>
+            <DialogContent className="sm:max-w-[400px]">
+                <DialogHeader className="items-center text-center">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10 text-destructive mb-2">
+                        <AlertCircle className="h-6 w-6" />
+                    </div>
+                    <DialogTitle>Delete Transaction?</DialogTitle>
+                    <DialogDescription>
+                        This action cannot be undone. This will permanently delete the transaction
+                        from your records.
+                    </DialogDescription>
+                </DialogHeader>
+                <DialogFooter className="sm:justify-center gap-2 mt-2">
+                    <Button
+                        variant="outline"
+                        onClick={() => setDeletingId(null)}
+                        className="flex-1 sm:flex-none"
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        variant="destructive"
+                        onClick={handleConfirmDelete}
+                        className="flex-1 sm:flex-none"
+                    >
+                        Delete
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
         </>
     )
 }

@@ -26,7 +26,7 @@ export default function SummaryCard(){
                         <span className="text-sm text-muted-foreground">{card.label}</span>
                         <card.icon className={`h-4 w-4 ${card.colorClass}`}/>
                     </div>
-                    <p className={`start-value ${card.colorClass}`}>
+                    <p className={`start-value font-bold ${card.colorClass}`}>
                         {fmt(card.getValue(totalBalance, totalIncome, totalExpenses))}
                     </p>
                 </motion.div>
@@ -40,7 +40,7 @@ export default function SummaryCard(){
                     <span className="text-sm text-muted-foreground">Transactions</span>
                     <DollarSign className="h-4 w-4 text-muted-foreground"/>
                 </div>
-                <p className="start-value">{txCount}</p>
+                <p className="start-value font-bold">{txCount}</p>
             </motion.div>
         </div>
     )
